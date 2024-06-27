@@ -1,132 +1,66 @@
+let startTime, updatedTime, difference;
+let tInterval;
+let running = false;
+let lapCount = 0;
 
-const board = document.getElementById('board');
-const cells = document.querySelectorAll('.cell');
+const display = document.getElementById('display');
+const startStopButton = document.getElementById('startStop');
 const resetButton = document.getElementById('reset');
-const message = document.getElementById('message');
-let gameState = ["", "", "", "", "", "", "", "", ""];
-let gameActive = true;
-let currentPlayer = 'X'; // User starts as 'X'
+const lapButton = document.getElementById('lap');
+const laps = document.getElementById('laps');
 
-const winningConditions = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6]
-];
+startStopButton.addEventListener('click', startStop);
+resetButton.addEventListener('click', reset);
+lapButton.addEventListener('click', lap);
 
-cells.forEach(cell => {
-    cell.addEventListener('click', handleCellClick);
-});
-
-resetButton.addEventListener('click', handleReset);
-
-function handleCellClick(event) {
-    const clickedCell = event.target;
-    const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
-
-    if (gameState[clickedCellIndex] !== "" || !gameActive) {
-        return;
-    }
-
-    gameState[clickedCellIndex] = currentPlayer;
-    clickedCell.textContent = currentPlayer;
-    clickedCell.classList.add(currentPlayer.toLowerCase());
-
-    if (checkWin()) {
-        gameActive = false;
-        message.textContent = `${currentPlayer} wins!`;
-        return;
-    }
-
-    if (!gameState.includes("")) {
-        gameActive = false;
-        message.textContent = `It's a draw!`;
-        return;
-    }
-
-    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-    if (currentPlayer === 'O') {
-        setTimeout(makeComputerMove, 500); // Adding a delay for realism
+function startStop() {
+    if (!running) {
+        startTime = new Date().getTime() - (difference || 0);
+        tInterval = setInterval(updateTime, 10);
+        startStopButton.textContent = 'Stop';
+        startStopButton.style.background = '#f44336';
+        running = true;
+    } else {
+        clearInterval(tInterval);
+        startStopButton.textContent = 'Start';
+        startStopButton.style.background = '#4caf50';
+        running = false;
     }
 }
 
-function makeComputerMove() {
-    if (!gameActive) return;
-
-    // Try to win
-    let move = findBestMove('O');
-    if (move === null) {
-        // Block the player
-        move = findBestMove('X');
-    }
-    if (move === null) {
-        // Pick a random move
-        let availableCells = [];
-        gameState.forEach((cell, index) => {
-            if (cell === "") {
-                availableCells.push(index);
-            }
-        });
-        move = availableCells[Math.floor(Math.random() * availableCells.length)];
-    }
-
-    gameState[move] = currentPlayer;
-    const computerCell = document.querySelector(`.cell[data-index='${move}']`);
-    computerCell.textContent = currentPlayer;
-    computerCell.classList.add(currentPlayer.toLowerCase());
-
-    if (checkWin()) {
-        gameActive = false;
-        message.textContent = `${currentPlayer} wins!`;
-        return;
-    }
-
-    if (!gameState.includes("")) {
-        gameActive = false;
-        message.textContent = `It's a draw!`;
-        return;
-    }
-
-    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+function reset() {
+    clearInterval(tInterval);
+    display.textContent = '00:00:00.00';
+    difference = 0;
+    running = false;
+    startStopButton.textContent = 'Start';
+    startStopButton.style.background = '#4caf50';
+    laps.innerHTML = '';
+    lapCount = 0;
 }
 
-function findBestMove(player) {
-    for (let i = 0; i < winningConditions.length; i++) {
-        const [a, b, c] = winningConditions[i];
-        if (gameState[a] === player && gameState[b] === player && gameState[c] === "") {
-            return c;
-        }
-        if (gameState[a] === player && gameState[c] === player && gameState[b] === "") {
-            return b;
-        }
-        if (gameState[b] === player && gameState[c] === player && gameState[a] === "") {
-            return a;
-        }
+function lap() {
+    if (running) {
+        lapCount++;
+        const lapTime = document.createElement('div');
+        lapTime.className = 'lap';
+        lapTime.textContent = `Lap ${lapCount}: ${display.textContent}`;
+        laps.appendChild(lapTime);
     }
-    return null;
 }
 
-function checkWin() {
-    for (let i = 0; i < winningConditions.length; i++) {
-        const [a, b, c] = winningConditions[i];
-        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
-            return true;
-        }
-    }
-    return false;
-}
+function updateTime() {
+    updatedTime = new Date().getTime();
+    difference = updatedTime - startTime;
 
-function handleReset() {
-    gameState = ["", "", "", "", "", "", "", "", ""];
-    gameActive = true;
-    currentPlayer = 'X';
-    cells.forEach(cell => {
-        cell.textContent = "";
-        cell.classList.remove('x', 'o');
-    });
-    message.textContent = "";
+    const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+    const milliseconds = Math.floor((difference % 1000) / 10);
+
+    display.textContent =
+        (hours ? (hours > 9 ? hours : '0' + hours) : '00') + ':' +
+        (minutes ? (minutes > 9 ? minutes : '0' + minutes) : '00') + ':' +
+        (seconds > 9 ? seconds : '0' + seconds) + '.' +
+        (milliseconds > 9 ? milliseconds : '0' + milliseconds);
 }
